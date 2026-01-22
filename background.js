@@ -6,6 +6,7 @@ const REMINDER_ALARM = 'tabJanitorArchiveReminder';
 const STALE_ARCHIVE_DAYS = 7;
 const REMINDER_INTERVAL_MINUTES = 360; // every 6 hours
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const NOTIFICATION_ICON = 'icons/favicon-128x128.png';
 const getDomainLabel = (url) => {
     try {
         const hostname = new URL(url).hostname;
@@ -63,7 +64,7 @@ function handleReminderAlarm() {
 
         chrome.notifications.create({
             type: 'basic',
-            iconUrl: 'icon.png',
+            iconUrl: NOTIFICATION_ICON,
             title: 'Time to review archived tabs',
             message: `You have ${stale.length} tab${stale.length === 1 ? '' : 's'} archived for over ${STALE_ARCHIVE_DAYS} days.`
         });
@@ -174,7 +175,7 @@ async function archiveTabs(tabsToKill, options = {}) {
 function showNotification(count) {
     chrome.notifications.create({
         type: "basic",
-        iconUrl: "icon.png", // You'll need a small 128x128 icon
+        iconUrl: NOTIFICATION_ICON,
         title: "Focus-Guard Active",
         message: `Closed ${count} tabs to save memory. Check your archive!`
     });

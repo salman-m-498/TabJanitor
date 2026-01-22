@@ -8,7 +8,7 @@ Tab Janitor is a Chrome extension that keeps active browsing lean by automatical
 3. [UI Walkthrough](#ui-walkthrough)
 4. [Installation](#installation)
 5. [Development](#development)
-7. [Future Enhancements](#future-enhancements)
+6. [Future Enhancements](#future-enhancements)
 
 ## Highlights
 - **Smart auto-close**: configurable toggle and tab limit automatically archive least-recent tabs when windows get crowded.
