@@ -1,8 +1,28 @@
 const TAB_LIMIT = 10;
 
-// Listen for new tabs being created
+let autoClose = false
+let saveTimer = null;
+
+function saveCurrentTabs(tabs){
+    chrome.storage.local.set({ current: tabs });
+}
+
+function captureCurrentTabs(){
+        chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
+        const current = tabs.map(tab => ({ id: tab.id, title: tab.title, url: tab.url }));
+
+        saveCurrentTabs(current);
+    });
+}
+
+function scheduleCapture() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(captureCurrentTabs, 200); // debounce
+};
+
 chrome.tabs.onCreated.addListener(() => {
     chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
+        if (!autoClose) return;
         if (tabs.length > TAB_LIMIT) {
             // Sort by ID (oldest first) or use 'lastAccessed' if available
             const overflow = tabs.slice(0, tabs.length - TAB_LIMIT);
@@ -10,12 +30,7 @@ chrome.tabs.onCreated.addListener(() => {
             archiveTabs(overflow);
         }
     });
-
-    chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
-        const currentTabs = tabs.map(tab => ({ id: tab.id, title: tab.title }));
-
-        currentTabs(currentTabs);
-    });
+    scheduleCapture();
 });
 
 function archiveTabs(tabsToKill) {
@@ -40,12 +55,6 @@ function archiveTabs(tabsToKill) {
     });
 }
 
-function currentTabs(tabs){
-    chrome.storage.local.get({ current: [] }, (data) => {
-        let currentTabs = data.current;
-    });
-}
-
 function showNotification(count) {
     chrome.notifications.create({
         type: "basic",
@@ -54,3 +63,9 @@ function showNotification(count) {
         message: `Closed ${count} tabs to save memory. Check your archive!`
     });
 }
+
+chrome.tabs.onRemoved.addListener(() => scheduleCapture());
+chrome.tabs.onUpdated.addListener(() => scheduleCapture());
+chrome.tabs.onActivated.addListener(() => scheduleCapture());
+
+captureCurrentTabs();
