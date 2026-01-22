@@ -1,19 +1,198 @@
-const listDiv = document.getElementById('list');
-        chrome.storage.local.get({ archived: [] }, (data) => {
-            data.archived.reverse().forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'tab-item';
-                div.innerHTML = `
-                    <a href="${item.url}" target="_blank">${item.title}</a><br>
-                    <span class="date">${item.date || ''}</span>
-                `;
-                listDiv.appendChild(div);
-            });
-        });
+const autoCloseToggle = document.getElementById('auto-close-toggle');
+const tabLimitInput = document.getElementById('tab-limit');
+const settingsState = { autoClose: false, tabLimit: 10 };
 
-        document.getElementById('clear').onclick = () => {
-            chrome.storage.local.set({ archived: [] }, () => location.reload());
-        };
+function syncSettingsUI() {
+    autoCloseToggle.checked = settingsState.autoClose;
+    tabLimitInput.value = settingsState.tabLimit;
+}
+
+function persistSettings() {
+    chrome.runtime.sendMessage({
+        action: 'updateSettings',
+        autoClose: settingsState.autoClose,
+        tabLimit: settingsState.tabLimit
+    });
+}
+
+chrome.runtime.sendMessage({ action: 'getSettings' }, (settings) => {
+    if (!settings) return;
+    settingsState.autoClose = Boolean(settings.autoClose);
+    settingsState.tabLimit = settings.tabLimit || 10;
+    syncSettingsUI();
+});
+
+autoCloseToggle.addEventListener('change', () => {
+    settingsState.autoClose = autoCloseToggle.checked;
+    persistSettings();
+});
+
+tabLimitInput.addEventListener('change', () => {
+    const parsed = parseInt(tabLimitInput.value, 10);
+    if (!Number.isNaN(parsed)) {
+        settingsState.tabLimit = Math.max(2, Math.min(50, parsed));
+        tabLimitInput.value = settingsState.tabLimit;
+        persistSettings();
+    }
+});
+
+const listDiv = document.getElementById('list');
+const archiveNoteInput = document.getElementById('archive-note');
+const archiveSearchInput = document.getElementById('archive-search');
+const archiveDomainFilter = document.getElementById('archive-domain-filter');
+const archiveAgeFilter = document.getElementById('archive-age-filter');
+const loadMoreArchiveBtn = document.getElementById('load-more-archive');
+const ARCHIVE_PAGE_SIZE = 15;
+const archiveState = { records: [], filtered: [], visibleCount: ARCHIVE_PAGE_SIZE };
+
+const getDomainLabel = (url) => {
+    try {
+        const hostname = new URL(url).hostname;
+        return hostname.replace(/^www\./, '') || hostname;
+    } catch (err) {
+        return 'unknown';
+    }
+};
+
+const createArchiveRow = (item) => {
+    const div = document.createElement('div');
+    div.className = 'tab-item';
+
+    const header = document.createElement('div');
+    header.className = 'row-head';
+
+    if (item.favicon) {
+        const icon = document.createElement('img');
+        icon.className = 'favicon';
+        icon.src = item.favicon;
+        icon.alt = '';
+        header.appendChild(icon);
+    }
+
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.target = '_blank';
+    link.textContent = item.title || item.url;
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        chrome.runtime.sendMessage({ action: 'openArchivedTab', tab: item });
+    });
+    header.appendChild(link);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const domainLabel = item.domain || getDomainLabel(item.url);
+    meta.innerHTML = `
+        <span>${domainLabel}</span>
+        <span>${item.date || ''}</span>
+    `;
+
+    div.appendChild(header);
+    div.appendChild(meta);
+    if (item.note) {
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.textContent = item.note;
+        div.appendChild(note);
+    }
+
+    const restoreBtn = document.createElement('button');
+    restoreBtn.type = 'button';
+    restoreBtn.className = 'inline-btn';
+    restoreBtn.textContent = 'Restore';
+    restoreBtn.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ action: 'restoreArchivedTab', tab: item }, () => {
+            location.reload();
+        });
+    });
+    div.appendChild(restoreBtn);
+    return div;
+};
+
+const renderArchiveList = () => {
+    listDiv.innerHTML = '';
+    if (archiveState.filtered.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'tab-item';
+        empty.textContent = 'No archived tabs match your filters yet.';
+        listDiv.appendChild(empty);
+        loadMoreArchiveBtn.style.display = 'none';
+        return;
+    }
+
+    const visibleItems = archiveState.filtered.slice(0, archiveState.visibleCount);
+    visibleItems.forEach(item => listDiv.appendChild(createArchiveRow(item)));
+
+    if (archiveState.visibleCount < archiveState.filtered.length) {
+        loadMoreArchiveBtn.style.display = 'block';
+        loadMoreArchiveBtn.disabled = false;
+        loadMoreArchiveBtn.textContent = `Load more (${archiveState.filtered.length - archiveState.visibleCount} left)`;
+    } else {
+        loadMoreArchiveBtn.style.display = 'none';
+    }
+};
+
+const applyArchiveFilters = (resetVisible = false) => {
+    if (resetVisible) {
+        archiveState.visibleCount = ARCHIVE_PAGE_SIZE;
+    }
+
+    const query = archiveSearchInput.value.trim().toLowerCase();
+    const domain = archiveDomainFilter.value;
+    const ageFilter = archiveAgeFilter.value;
+    let cutoff = null;
+
+    if (ageFilter !== 'all') {
+        const days = parseInt(ageFilter, 10);
+        cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    }
+
+    archiveState.filtered = archiveState.records.filter(item => {
+        const domainLabel = item.domain || getDomainLabel(item.url);
+        const domainMatch = domain === 'all' || domainLabel === domain;
+
+        let ageMatch = true;
+        if (cutoff) {
+            const timestamp = item.date ? Date.parse(item.date) : NaN;
+            ageMatch = Number.isFinite(timestamp) ? timestamp >= cutoff : false;
+        }
+
+        let searchMatch = true;
+        if (query) {
+            const text = `${item.title || ''} ${item.url || ''}`.toLowerCase();
+            searchMatch = text.includes(query);
+        }
+
+        return domainMatch && ageMatch && searchMatch;
+    });
+
+    renderArchiveList();
+};
+
+const hydrateDomainFilter = () => {
+    const domains = Array.from(new Set(archiveState.records.map(item => item.domain || getDomainLabel(item.url)))).filter(Boolean).sort();
+    archiveDomainFilter.innerHTML = '<option value="all">All domains</option>' +
+        domains.map(domain => `<option value="${domain}">${domain}</option>`).join('');
+};
+
+chrome.storage.local.get({ archived: [] }, (data) => {
+    archiveState.records = data.archived.slice().reverse();
+    hydrateDomainFilter();
+    applyArchiveFilters(true);
+});
+
+archiveSearchInput.addEventListener('input', () => applyArchiveFilters(true));
+archiveDomainFilter.addEventListener('change', () => applyArchiveFilters(true));
+archiveAgeFilter.addEventListener('change', () => applyArchiveFilters(true));
+
+loadMoreArchiveBtn.addEventListener('click', () => {
+    archiveState.visibleCount += ARCHIVE_PAGE_SIZE;
+    renderArchiveList();
+});
+
+document.getElementById('clear').onclick = () => {
+    chrome.storage.local.set({ archived: [] }, () => location.reload());
+};
 
 const currentListDiv = document.getElementById('current-list');
 const selectedTabs = [];
@@ -25,11 +204,10 @@ chrome.storage.local.get({ current: [] }, (data) => {
     }
     // Add header with "Select" column
     const headerDiv = document.createElement('div');
-    headerDiv.style.fontWeight = 'bold';
-    headerDiv.style.marginBottom = '8px';
+    headerDiv.className = 'current-header';
     headerDiv.innerHTML = `
-        <span style="display: inline-block; width: calc(100% - 30px); vertical-align: middle;">Current Tabs</span>
-        <span style="display: inline-block; width: 30px; text-align: center;">Select</span>
+        <span>Current Tabs</span>
+        <span>Select</span>
     `;
     currentListDiv.appendChild(headerDiv);
 
@@ -48,13 +226,10 @@ chrome.storage.local.get({ current: [] }, (data) => {
 
     safe.forEach(item => {
         const div = document.createElement('div');
-        div.className = 'tab-item';
-        div.style.display = 'flex';
-        div.style.justifyContent = 'space-between';
-        div.style.alignItems = 'center';
+        div.className = 'tab-item current-row';
         
         const contentDiv = document.createElement('div');
-        contentDiv.style.flex = '1';
+        contentDiv.className = 'current-content';
         contentDiv.innerHTML = `
             <a href="${item.url}" target="_blank">${item.title}</a><br>
             <span class="date">${item.date || ''}</span>
@@ -62,7 +237,7 @@ chrome.storage.local.get({ current: [] }, (data) => {
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.style.marginLeft = '10px';
+        checkbox.className = 'ios-checkbox';
         checkbox.dataset.url = item.url;
         checkbox.dataset.title = item.title;
         checkbox.dataset.date = item.date || new Date().toLocaleString();
@@ -95,24 +270,22 @@ chrome.storage.local.get({ current: [] }, (data) => {
 
 document.getElementById('archive-selected').onclick = () => {
     if (selectedTabs.length === 0) return;
-    chrome.storage.local.get({ archived: [], current: [] }, (data) => {
-        const updatedArchive = data.archived.concat(selectedTabs.map(tab => ({
-            title: tab.title,
-            url: tab.url,
-            date: tab.date || new Date().toLocaleString()
-        })));
-
-        // Remove these tabs from the browser and update storage
-        chrome.storage.local.set({ archived: updatedArchive }, () => {
-            selectedTabs.forEach(tab => {
-                chrome.tabs.query({ url: tab.url }, (tabs) => {
-                    tabs.forEach(t => chrome.tabs.remove(t.id));
-                });
-            });
-
-            // Clear selection and refresh lists
-            selectedTabs.length = 0;
-            location.reload();
-        });
+    
+    // Get the actual tab objects to pass to archiveTabs
+    chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
+        const tabsToArchive = tabs.filter(tab => 
+            selectedTabs.some(selected => selected.url === tab.url)
+        );
+        const note = (archiveNoteInput.value || '').trim();
+        
+        // Use the background archiveTabs function to capture scroll position
+        chrome.runtime.sendMessage(
+            { action: 'archiveSelectedTabs', tabs: tabsToArchive, note },
+            () => {
+                selectedTabs.length = 0;
+                archiveNoteInput.value = '';
+                location.reload();
+            }
+        );
     });
 };

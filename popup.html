@@ -2,20 +2,280 @@
 <html>
 <head>
     <style>
-        body { width: 300px; font-family: sans-serif; padding: 10px; }
-        .tab-item { border-bottom: 1px solid #eee; padding: 8px 0; }
-        .tab-item a { color: #d51a2a; text-decoration: none; font-size: 12px; font-weight: bold; }
-        .date { font-size: 10px; color: #888; }
-        button { width: 100%; margin-top: 10px; cursor: pointer; }
+        :root {
+            --bg: #f2f4ff;
+            --card: rgba(255, 255, 255, 0.78);
+            --border: rgba(255, 255, 255, 0.55);
+            --text: #0f172a;
+            --muted: #6b7280;
+            --accent: #0071e3;
+            --accent-soft: rgba(0, 113, 227, 0.18);
+            --radius: 20px;
+        }
+        body {
+            width: 360px;
+            min-height: 640px;
+            margin: 0;
+            padding: 18px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(160deg, #edf2ff 0%, #fef6ff 55%, #f1fbff 100%);
+            color: var(--text);
+        }
+        h3 {
+            margin: 18px 0 10px;
+            font-size: 14px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .glass {
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 15px 40px rgba(15, 23, 42, 0.12);
+            backdrop-filter: blur(26px);
+            padding: 16px;
+        }
+        .settings {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .settings label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .settings small {
+            color: var(--muted);
+            font-size: 11px;
+        }
+        .limit-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        #auto-close-toggle {
+            width: 44px;
+            height: 24px;
+            accent-color: var(--accent);
+        }
+        #tab-limit {
+            width: 70px;
+            border: 0;
+            border-radius: 12px;
+            padding: 4px 6px;
+            background: var(--accent-soft);
+            font-weight: 600;
+        }
+        .archive-note {
+            margin: 12px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .archive-note label {
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .archive-note input,
+        .archive-controls input,
+        .archive-controls select {
+            border: 0;
+            border-radius: 14px;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.92);
+            font-size: 12px;
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+        }
+        .archive-controls {
+            margin: 10px 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .filters-row {
+            display: flex;
+            gap: 8px;
+        }
+        .filters-row select {
+            flex: 1;
+        }
+        #current-list,
+        #list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .current-header,
+        .current-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .current-header {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        .current-header span:first-child,
+        .current-row .current-content {
+            flex: 1;
+        }
+        .tab-item {
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
+        }
+        .tab-item a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .row-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-item .meta {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .tab-item .note {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text);
+            background: rgba(0, 113, 227, 0.1);
+            padding: 8px;
+            border-radius: 12px;
+        }
+        .favicon {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+        }
+        button {
+            font-family: inherit;
+            border: 0;
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .full-width {
+            width: 100%;
+            margin-top: 10px;
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 12px 22px rgba(0, 113, 227, 0.3);
+        }
+        #clear {
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--text);
+            box-shadow: none;
+        }
+        #load-more-archive {
+            background: var(--accent-soft);
+            color: var(--accent);
+            box-shadow: none;
+        }
+        .inline-btn {
+            width: auto;
+            font-size: 11px;
+            padding: 6px 12px;
+            margin-top: 8px;
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--text);
+        }
+        .ios-checkbox {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 8px;
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            background: linear-gradient(135deg, #f8fbff, #e8ecf8);
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .ios-checkbox::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 12px;
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            top: 2px;
+            left: 7px;
+            transform: rotate(45deg) scale(0);
+            transform-origin: center;
+            transition: transform 0.2s ease;
+        }
+        .ios-checkbox:checked {
+            background: linear-gradient(135deg, #2aa1ff, #0c63ff);
+            border-color: transparent;
+            box-shadow: 0 8px 18px rgba(0, 113, 227, 0.25);
+        }
+        .ios-checkbox:checked::after {
+            transform: rotate(45deg) scale(1);
+        }
     </style>
 </head>
 <body>
+    <div class="settings glass">
+        <h3>Tab Janitor</h3>
+        <label>
+            <input type="checkbox" id="auto-close-toggle">
+            Auto archive tabs automatically
+        </label>
+        <div class="limit-row">
+            When more than <input type="number" id="tab-limit" min="2" max="50" step="1"> tabs are open
+        </div>
+        <small>Tabs above this limit are archived into the list below so your browser stays fast.</small>
+    </div>
     <h3>Current Tabs</h3>
     <div id="current-list"></div>
-    <button id="archive-selected">Archive Selected</button>
+    <div class="archive-note">
+        <label for="archive-note">Optional note</label>
+        <input type="text" id="archive-note" maxlength="120" placeholder="Why archive these tabs?">
+    </div>
+    <button id="archive-selected" class="full-width">Archive Selected</button>
     <h3>Archived Tabs</h3>
+    <div class="archive-controls glass">
+        <input type="search" id="archive-search" placeholder="Search titles or URLs">
+        <div class="filters-row">
+            <select id="archive-domain-filter">
+                <option value="all">All domains</option>
+            </select>
+            <select id="archive-age-filter">
+                <option value="all">Any time</option>
+                <option value="1">Past day</option>
+                <option value="7">Past week</option>
+                <option value="30">Past month</option>
+            </select>
+        </div>
+    </div>
     <div id="list"></div>
-    <button id="clear">Clear All</button>
+    <button id="load-more-archive" class="full-width" style="display:none;">Load more</button>
+    <button id="clear" class="full-width">Clear All</button>
 
     <script src="popup.js"></script>
 </body>

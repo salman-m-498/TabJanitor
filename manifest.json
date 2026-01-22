@@ -3,7 +3,8 @@
   "name": "Tab Janitor",
   "version": "1.0",
   "description": "Automatically archives excess tabs to keep your browser fast.",
-  "permissions": ["tabs", "storage", "notifications"],
+  "permissions": ["tabs", "storage", "notifications", "scripting"],
+  "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html"
   },
