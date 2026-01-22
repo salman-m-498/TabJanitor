@@ -64,10 +64,17 @@ Tab Janitor is a Chrome extension that keeps active browsing lean by automatical
 4. **Maintenance controls**: `Load more` and `Clear All` buttons keep the archive manageable.
 
 ## Installation
-1. Clone or download the repository.
+### Option A — Install from Release (`.crx`)
+1. Grab the latest **tabjanitor.crx** from the [Releases](../../releases) page.
+2. Open **chrome://extensions** and toggle **Developer mode** (top-right).
+3. Drag the `.crx` file into the page (or use **Load unpacked** → select the `.crx`).
+4. Confirm the install prompt; Tab Janitor appears in the toolbar—pin it for quick access.
+
+### Option B — Run from Source
+1. Clone or download this repository.
 2. Open **chrome://extensions** and enable **Developer mode**.
 3. Click **Load unpacked** and select the project folder (`TabJanitor`).
-4. The Tab Janitor icon appears in the toolbar. Pin it for quick access.
+4. Hit **Reload** on the extension card whenever you tweak the code.
 
 ## Development
 - **Stack**: Chrome MV3, vanilla JavaScript, DOM APIs, Chrome tabs/storage/alarms/notifications APIs.
