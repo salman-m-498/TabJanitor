@@ -9,7 +9,13 @@ function saveCurrentTabs(tabs){
 
 function captureCurrentTabs(){
         chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
-        const current = tabs.map(tab => ({ id: tab.id, title: tab.title, url: tab.url }));
+        const current = tabs.map(tab => ({
+            id: tab.id,
+            title: tab.title,
+            url: tab.url,
+            // Store a readable timestamp for display/fallback
+            date: new Date(tab.lastAccessed || Date.now()).toLocaleString()
+        }));
 
         saveCurrentTabs(current);
     });

@@ -5,7 +5,7 @@ const listDiv = document.getElementById('list');
                 div.className = 'tab-item';
                 div.innerHTML = `
                     <a href="${item.url}" target="_blank">${item.title}</a><br>
-                    <span class="date">${item.date}</span>
+                    <span class="date">${item.date || ''}</span>
                 `;
                 listDiv.appendChild(div);
             });
@@ -33,7 +33,20 @@ chrome.storage.local.get({ current: [] }, (data) => {
     `;
     currentListDiv.appendChild(headerDiv);
 
-    data.current.forEach(item => {
+    const checkboxes = [];
+    let lastCheckedIndex = null;
+
+    const updateSelection = (box, checked) => {
+        const { url, title, date } = box.dataset;
+        const idx = selectedTabs.findIndex(tab => tab.url === url);
+        if (checked && idx === -1) {
+            selectedTabs.push({ url, title, date });
+        } else if (!checked && idx !== -1) {
+            selectedTabs.splice(idx, 1);
+        }
+    };
+
+    safe.forEach(item => {
         const div = document.createElement('div');
         div.className = 'tab-item';
         div.style.display = 'flex';
@@ -52,16 +65,25 @@ chrome.storage.local.get({ current: [] }, (data) => {
         checkbox.style.marginLeft = '10px';
         checkbox.dataset.url = item.url;
         checkbox.dataset.title = item.title;
-        checkbox.dataset.date = item.date;
+        checkbox.dataset.date = item.date || new Date().toLocaleString();
+
+        const idx = checkboxes.length;
+        checkboxes.push(checkbox);
         
-        checkbox.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                selectedTabs.push({ url: item.url, title: item.title, date: item.date });
-            } else {
-                const idx = selectedTabs.findIndex(tab => tab.url === item.url);
-                if (idx !== -1) {
-                    selectedTabs.splice(idx, 1);
+        checkbox.addEventListener('click', (e) => {
+            const targetState = checkbox.checked;
+
+            if (e.shiftKey && lastCheckedIndex !== null) {
+                const start = Math.min(lastCheckedIndex, idx);
+                const end = Math.max(lastCheckedIndex, idx);
+                for (let i = start; i <= end; i++) {
+                    const cb = checkboxes[i];
+                    cb.checked = targetState;
+                    updateSelection(cb, targetState);
                 }
+            } else {
+                updateSelection(checkbox, targetState);
+                lastCheckedIndex = idx;
             }
         });
 
