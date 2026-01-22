@@ -28,9 +28,15 @@ Tab Janitor is a Chrome extension that keeps active browsing lean by automatical
 | Manifest | Chrome MV3 configuration, permissions (`tabs`, `storage`, `notifications`, `scripting`), and default popup binding. | [`manifest.json`](manifest.json) |
 
 ## Screenshots
-<img width="1919" height="1079" alt="Screenshot 2026-01-22 211108" src="https://github.com/user-attachments/assets/9903d24f-c805-4c4d-adcc-61308cffe00d" />
-<img width="485" height="730" alt="Screenshot 2026-01-22 211426" src="https://github.com/user-attachments/assets/5a43d274-a824-42b3-9695-3e2bb957a9d5" />
-<img width="507" height="744" alt="Screenshot 2026-01-22 211541" src="https://github.com/user-attachments/assets/ef438992-1399-43ae-87ec-310a8267c744" />
+
+### 1. End-to-End Workflow (Desktop)
+<img width="1919" height="1079" alt="Desktop workflow overview showing live window plus popup" src="https://github.com/user-attachments/assets/9903d24f-c805-4c4d-adcc-61308cffe00d" />
+
+### 2. Current Tabs Panel
+<img width="485" height="730" alt="Current tabs selector with shift-clickable checkboxes" src="https://github.com/user-attachments/assets/5a43d274-a824-42b3-9695-3e2bb957a9d5" />
+
+### 3. Archived Tabs Browser
+<img width="507" height="744" alt="Archived tab cards with filters and restore buttons" src="https://github.com/user-attachments/assets/ef438992-1399-43ae-87ec-310a8267c744" />
 
 
 ### Data Model
