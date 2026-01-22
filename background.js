@@ -7,6 +7,7 @@ const STALE_ARCHIVE_DAYS = 7;
 const REMINDER_INTERVAL_MINUTES = 360; // every 6 hours
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const NOTIFICATION_ICON = 'icons/favicon-128x128.png';
+const hasAlarmsApi = () => typeof chrome?.alarms?.create === 'function';
 const getDomainLabel = (url) => {
     try {
         const hostname = new URL(url).hostname;
@@ -42,22 +43,28 @@ function removeArchivedEntry(match, callback) {
 }
 
 function scheduleReminderAlarm() {
-    if (!chrome.alarms) {
-        console.warn('Alarms API unavailable; reminder scheduling skipped.');
-        return;
+    try {
+        if (!hasAlarmsApi()) {
+            console.warn('Alarms API unavailable; reminder scheduling skipped.');
+            return;
+        }
+        chrome.alarms.create(REMINDER_ALARM, { periodInMinutes: REMINDER_INTERVAL_MINUTES });
+    } catch (err) {
+        console.warn('Failed to schedule reminder alarm', err);
     }
-    chrome.alarms.create(REMINDER_ALARM, { periodInMinutes: REMINDER_INTERVAL_MINUTES });
 }
 
 function handleReminderAlarm() {
-    chrome.storage.local.get({ archived: [], lastReminder: 0 }, (data) => {
+    chrome.storage.local.get({ archived: [], lastReminder: 0 }, (data = { archived: [], lastReminder: 0 }) => {
+        const archived = Array.isArray(data.archived) ? data.archived : [];
+        const lastReminder = Number.isFinite(data.lastReminder) ? data.lastReminder : 0;
         const now = Date.now();
-        if (now - data.lastReminder < REMINDER_COOLDOWN_MS) {
+        if (now - lastReminder < REMINDER_COOLDOWN_MS) {
             return;
         }
 
         const cutoff = now - STALE_ARCHIVE_DAYS * 24 * 60 * 60 * 1000;
-        const stale = data.archived.filter((item) => {
+        const stale = archived.filter((item) => {
             const timestamp = item.date ? Date.parse(item.date) : NaN;
             return Number.isFinite(timestamp) && timestamp < cutoff;
         });
@@ -78,9 +85,9 @@ function handleReminderAlarm() {
 }
 
 function loadSettings() {
-    chrome.storage.local.get({ autoClose: false, tabLimit: 10 }, (settings) => {
-        autoClose = settings.autoClose;
-        tabLimit = settings.tabLimit;
+    chrome.storage.local.get({ autoClose: false, tabLimit: 10 }, (settings = { autoClose: false, tabLimit: 10 }) => {
+        autoClose = Boolean(settings.autoClose);
+        tabLimit = settings.tabLimit || 10;
     });
 }
 
@@ -89,8 +96,12 @@ function saveCurrentTabs(tabs){
 }
 
 function captureCurrentTabs(){
-        chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
-        const current = tabs.map(tab => ({
+    chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
+    if (!Array.isArray(tabs)) {
+        console.warn('Unable to query tabs; skipping current snapshot.', chrome.runtime?.lastError);
+        return;
+    }
+    const current = tabs.map(tab => ({
             id: tab.id,
             title: tab.title,
             url: tab.url,
@@ -116,7 +127,7 @@ chrome.tabs.onCreated.addListener(() => {
         if (!autoClose) return;
         if (tabs.length > tabLimit) {
             // Sort by ID (oldest first) or use 'lastAccessed' if available
-            const overflow = tabs.slice(0, tabs.length - TAB_LIMIT);
+            const overflow = tabs.slice(0, tabs.length - tabLimit);
             
             archiveTabs(overflow);
         }
@@ -203,8 +214,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     }
 });
 chrome.tabs.onActivated.addListener(() => scheduleCapture());
-if (chrome.alarms) {
-    chrome.alarms.onAlarm.addListener((alarm) => {
+const addAlarmListener = chrome?.alarms?.onAlarm?.addListener?.bind(chrome.alarms?.onAlarm);
+if (hasAlarmsApi() && typeof addAlarmListener === 'function') {
+    addAlarmListener((alarm) => {
         if (alarm.name === REMINDER_ALARM) {
             handleReminderAlarm();
         }
