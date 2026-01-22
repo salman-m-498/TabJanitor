@@ -3,7 +3,7 @@
   "name": "Tab Janitor",
   "version": "1.0",
   "description": "Automatically archives excess tabs to keep your browser fast.",
-  "permissions": ["tabs", "storage", "notifications", "scripting"],
+  "permissions": ["tabs", "storage", "notifications", "scripting", "alarms"],
   "host_permissions": ["<all_urls>"],
   "icons": {
     "16": "icons/favicon-128x128.png",

@@ -42,6 +42,10 @@ function removeArchivedEntry(match, callback) {
 }
 
 function scheduleReminderAlarm() {
+    if (!chrome.alarms) {
+        console.warn('Alarms API unavailable; reminder scheduling skipped.');
+        return;
+    }
     chrome.alarms.create(REMINDER_ALARM, { periodInMinutes: REMINDER_INTERVAL_MINUTES });
 }
 
@@ -199,11 +203,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     }
 });
 chrome.tabs.onActivated.addListener(() => scheduleCapture());
-chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === REMINDER_ALARM) {
-        handleReminderAlarm();
-    }
-});
+if (chrome.alarms) {
+    chrome.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name === REMINDER_ALARM) {
+            handleReminderAlarm();
+        }
+    });
+}
 
 // Handle archive requests from popup with scroll position capture
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
