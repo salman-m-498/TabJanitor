@@ -1,5 +1,9 @@
 # Tab Janitor
 
+<p align="center">
+   <img src="icons/favicon-128x128.png" width="120" height="120" alt="Tab Janitor icon" />
+</p>
+
 Tab Janitor is a Chrome extension that keeps active browsing lean by automatically archiving overflow tabs into a searchable, filterable library. Each archived tab preserves where you left off, so future reading resumes at the same paragraph. The project combines a background service worker, modern popup UI, and Chrome's extension APIs into a polished productivity tool.
 
 ## Table of Contents
