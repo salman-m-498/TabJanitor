@@ -215,10 +215,12 @@ chrome.storage.local.get({ current: [] }, (data) => {
     let lastCheckedIndex = null;
 
     const updateSelection = (box, checked) => {
-        const { url, title, date } = box.dataset;
-        const idx = selectedTabs.findIndex(tab => tab.url === url);
+        const { id, url, title, date } = box.dataset;
+        const parsedId = Number(id);
+        const numericId = Number.isFinite(parsedId) ? parsedId : null;
+        const idx = selectedTabs.findIndex(tab => (numericId !== null ? tab.id === numericId : tab.url === url));
         if (checked && idx === -1) {
-            selectedTabs.push({ url, title, date });
+            selectedTabs.push({ id: numericId, url, title, date });
         } else if (!checked && idx !== -1) {
             selectedTabs.splice(idx, 1);
         }
@@ -238,6 +240,7 @@ chrome.storage.local.get({ current: [] }, (data) => {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'ios-checkbox';
+        checkbox.dataset.id = item.id;
         checkbox.dataset.url = item.url;
         checkbox.dataset.title = item.title;
         checkbox.dataset.date = item.date || new Date().toLocaleString();
@@ -273,9 +276,14 @@ document.getElementById('archive-selected').onclick = () => {
     
     // Get the actual tab objects to pass to archiveTabs
     chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
-        const tabsToArchive = tabs.filter(tab => 
-            selectedTabs.some(selected => selected.url === tab.url)
-        );
+        const tabsToArchive = tabs.filter(tab => {
+            return selectedTabs.some(selected => {
+                if (typeof selected.id === 'number') {
+                    return tab.id === selected.id;
+                }
+                return selected.url === tab.url;
+            });
+        });
         const note = (archiveNoteInput.value || '').trim();
         
         // Use the background archiveTabs function to capture scroll position
