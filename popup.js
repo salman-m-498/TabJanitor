@@ -273,22 +273,18 @@ chrome.storage.local.get({ current: [] }, (data) => {
 
 document.getElementById('archive-selected').onclick = () => {
     if (selectedTabs.length === 0) return;
-    
-    // Get the actual tab objects to pass to archiveTabs
+
     chrome.tabs.query({ pinned: false, currentWindow: true }, (tabs) => {
-        const tabsToArchive = tabs.filter(tab => {
-            return selectedTabs.some(selected => {
-                if (typeof selected.id === 'number') {
-                    return tab.id === selected.id;
-                }
-                return selected.url === tab.url;
-            });
-        });
+        const targets = selectedTabs.map(selected => {
+            const match = tabs.find(tab => tab.id === selected.id) || tabs.find(tab => tab.url === selected.url);
+            return match;
+        }).filter(Boolean);
+
+        if (targets.length === 0) return;
+
         const note = (archiveNoteInput.value || '').trim();
-        
-        // Use the background archiveTabs function to capture scroll position
         chrome.runtime.sendMessage(
-            { action: 'archiveSelectedTabs', tabs: tabsToArchive, note },
+            { action: 'archiveSelectedTabs', tabs: targets, note },
             () => {
                 selectedTabs.length = 0;
                 archiveNoteInput.value = '';
